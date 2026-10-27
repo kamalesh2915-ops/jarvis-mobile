@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#07111f">
+<title>JARVIS Mobile Starter</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root{color-scheme:dark;--bg:#07111f;--panel:#101f33;--blue:#61c7ff;--muted:#a9bfd3}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#173454,var(--bg) 55%);font:16px system-ui,Arial;color:#eef7ff;min-height:100vh}
+main{max-width:620px;margin:auto;padding:24px 18px 40px}.brand{text-align:center;margin:12px 0 26px}
+.orb{width:108px;height:108px;border:2px solid var(--blue);border-radius:50%;margin:0 auto 14px;display:grid;place-items:center;box-shadow:0 0 28px #249ce866,inset 0 0 24px #249ce833;font-size:30px;color:var(--blue)}
+h1{letter-spacing:5px;margin:0;font-size:28px}p{color:var(--muted);line-height:1.5}
+.panel{background:#101f33dd;border:1px solid #2a4662;border-radius:18px;padding:16px;margin:14px 0}
+label{display:block;color:var(--muted);font-size:14px;margin-bottom:7px}
+select,textarea,input{width:100%;background:#07111f;color:#eef7ff;border:1px solid #36536d;border-radius:10px;padding:12px;font:inherit}
+textarea{min-height:76px;resize:vertical}
+button{border:0;border-radius:12px;padding:13px 15px;font:600 15px system-ui;cursor:pointer}
+.primary{background:var(--blue);color:#04101b;width:100%;margin-top:10px}.secondary{background:#203954;color:#eef7ff;width:100%;margin-top:8px}
+#status{font-size:14px;color:var(--blue)}#answer{white-space:pre-wrap;line-height:1.55;overflow-wrap:anywhere}
+.small{font-size:13px;color:var(--muted)}.row{display:flex;gap:10px}.row>*{flex:1}
+</style>
+</head>
+<body>
+<main>
+  <header class="brand">
+    <div class="orb" id="orb">J</div>
+    <h1>J.A.R.V.I.S.</h1>
+    <p>Mobile voice assistant starter</p>
+  </header>
+  <section class="panel">
+    <label for="lang">Voice language</label>
+    <select id="lang"><option value="en-IN">English (India)</option><option value="ta-IN">தமிழ் (Tamil)</option></select>
+    <button class="primary" id="talk">🎙 Tap to speak</button>
+    <p id="status" role="status">Ready. Tap the microphone to ask a question.</p>
+  </section>
+  <section class="panel">
+    <label for="question">Or type your command</label>
+    <textarea id="question" placeholder="Try: open YouTube, open settings, or explain cash flow"></textarea>
+    <button class="secondary" id="ask">Run command</button>
+  </section>
+  <section class="panel">
+    <label>JARVIS response</label>
+    <div id="answer">Hello. I'm your JARVIS starter. Voice input and basic phone shortcuts may work in a supported browser.</div>
+    <button class="secondary" id="repeat">🔊 Speak response</button>
+  </section>
+  <section class="panel">
+    <strong>What this starter can do</strong>
+    <p>It can speak responses and open supported links or Android settings shortcuts. It does not yet contain an online AI backend or a real always-listening “JARVIS” wake word.</p>
+    <p class="small">For privacy, this page does not ask for an AI API key. Never put secret API keys in a public HTML file.</p>
+  </section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+let lastAnswer="Hello. I'm your JARVIS starter.";
+function say(text){
+  if(!('speechSynthesis' in window)){ $('status').textContent='Text-to-speech is not supported in this browser.'; return; }
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang=$('lang').value;
+  speechSynthesis.speak(u);
+}
+function respond(text){lastAnswer=text;$('answer').textContent=text;$('status').textContent='Done.';say(text);}
+function runCommand(raw){
+ const q=raw.trim(), l=q.toLowerCase();
+ if(!q){$('status').textContent='Please say or type a command.';return;}
+ $('question').value=q;
+ if(l.includes('youtube')){
+   respond('Opening YouTube.');
+   setTimeout(()=>window.open('https://www.youtube.com/','_blank','noopener'),250);return;
+ }
+ if(l.includes('settings')||l.includes('setting')){
+   respond('I can try to open Android settings. If your browser blocks this shortcut, open Settings manually.');
+   setTimeout(()=>{window.location.href='intent:#Intent;action=android.settings.SETTINGS;end';},300);return;
+ }
+ if(l.includes('alarm')){
+   respond('Please open your Clock app and set the alarm. This web starter cannot set alarms directly.');
+   return;
+ }
+ if(l.includes('hello')||l.includes('hi jarvis')||l.includes('வணக்கம்')){
+   respond($('lang').value==='ta-IN'?'வணக்கம்! நான் ஜார்விஸ். என்ன உதவி வேண்டும்?':'Hello! I am JARVIS. How can I help?');return;
+ }
+ if(l.includes('cash flow')){
+   respond('Cash flow means the money coming into and going out of a business. Positive cash flow means more money comes in than goes out during the period. This is a built-in demo answer, not a live AI response.');return;
+ }
+ respond('I heard: '+q+'. Online AI answers are not connected yet. A secure backend must be configured before this app can answer arbitrary questions with Gemini.');
+}
+$('ask').addEventListener('click',()=>runCommand($('question').value));
+$('repeat').addEventListener('click',()=>say(lastAnswer));
+$('talk').addEventListener('click',()=>{
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR){$('status').textContent='Speech recognition is unavailable in this browser. Try Google Chrome and check microphone permission, or type your command.';return;}
+ const r=new SR();r.lang=$('lang').value;r.interimResults=false;r.maxAlternatives=1;
+ $('status').textContent='Listening…';
+ $('orb').style.boxShadow='0 0 35px #61c7ff';
+ r.onresult=e=>runCommand(e.results[0][0].transcript);
+ r.onerror=e=>$('status').textContent='Speech error: '+e.error+'. Check microphone permission and internet connection.';
+ r.onend=()=>{$('orb').style.boxShadow='0 0 28px #249ce866';};
+ try{r.start();}catch(e){$('status').textContent='Could not start speech recognition. Please try again.';}
+});
+if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+</script>
+</body>
+</html>
